@@ -9,8 +9,8 @@ Tidal constituents analysis
 from typing import List, Optional, Tuple, Union
 import datetime
 import numpy
-from . import core
-from . import version
+from pytide import core
+from pytide import version
 
 __version__ = version.release()
 __date__ = version.date()

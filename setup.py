@@ -154,9 +154,6 @@ class BuildExt(setuptools.command.build_ext.build_ext):
     #: Preferred Eigen root
     EIGEN3_INCLUDE_DIR = None
 
-    #: Preferred MKL root
-    MKL_ROOT = None
-
     #: Run CMake to configure this project
     RECONFIGURE = None
 
@@ -181,21 +178,6 @@ class BuildExt(setuptools.command.build_ext.build_ext):
                 "Unable to find the Eigen3 library in the conda distribution "
                 "used.")
         return "-DEIGEN3_INCLUDE_DIR=" + str(eigen_include_dir)
-
-    @staticmethod
-    def mkl():
-        """Get the default MKL path in Anaconda's environnement."""
-        mkl_header = pathlib.Path(sys.prefix, "include", "mkl.h")
-        if mkl_header.exists():
-            os.environ["MKLROOT"] = sys.prefix
-            return
-        mkl_header = pathlib.Path(sys.prefix, "Library", "include", "mkl.h")
-        if mkl_header.exists():
-            os.environ["MKLROOT"] = str(pathlib.Path(sys.prefix, "Library"))
-            return
-        raise RuntimeError(
-            "Unable to find the MKL library in the conda distribution "
-            "used.")
 
     @staticmethod
     def is_conda():
@@ -224,11 +206,6 @@ class BuildExt(setuptools.command.build_ext.build_ext):
             result.append("-DEIGEN3_INCLUDE_DIR=" + self.EIGEN3_INCLUDE_DIR)
         elif is_conda:
             result.append(self.eigen())
-
-        if self.MKL_ROOT is not None:
-            os.environ["MKLROOT"] = self.MKL_ROOT
-        elif is_conda and platform.system() != 'Darwin':
-            self.mkl()
 
         return result
 
@@ -293,7 +270,6 @@ class Build(distutils.command.build.build):
     user_options += [
         ('eigen-root=', None, 'Preferred Eigen3 include directory'),
         ('cxx-compiler=', None, 'Preferred C++ compiler'),
-        ('mkl-root=', None, 'Preferred MKL installation prefix'),
         ('reconfigure', None, 'Forces CMake to reconfigure this project')
     ]
 
@@ -302,7 +278,6 @@ class Build(distutils.command.build.build):
         super().initialize_options()
         self.cxx_compiler = None
         self.eigen_root = None
-        self.mkl_root = None
         self.reconfigure = None
 
     def run(self):
