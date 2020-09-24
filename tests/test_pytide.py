@@ -6,6 +6,7 @@ import datetime
 import os
 import time
 import numpy
+import numpy as np
 import unittest
 import netCDF4
 import pytide
@@ -129,11 +130,36 @@ class TestPyTideAnalyzer(unittest.TestCase):
                               crrt_timestamp in time_data]
 
         pytide_analyzer.fit_tide_data(list_utc_datetimes, h, display=False)
+        prediction = pytide_analyzer.predict_tide(list_utc_datetimes)
 
-        prediction = pytide_analyzer.pre
+        tolerance = 1e-3
+
+        all_within_tolerance = np.all(prediction - h < tolerance)
+        assert all_within_tolerance
 
     def test_agains_real_world(self):
-        pass
+        with netCDF4.Dataset(self.dataset_real_world) as dataset:
+            time_input = dataset['timestamps'][:]
+            observations = dataset['observations'][:]
+            official_predictions = dataset['predictions'][:]
+
+        list_utc_datetimes = [pytz.utc.localize(datetime.datetime.fromtimestamp(crrt_timestamp)) for
+                              crrt_timestamp in time_input]
+
+        pytide_analyzer = pytide.PyTideAnalyzer(verbose=0)
+
+        # using display=True here would illustrate the fit
+        pytide_analyzer.fit_tide_data(list_utc_datetimes, observations, display=True, clean_signals=True)
+        prediction = pytide_analyzer.predict_tide(list_utc_datetimes)
+
+        def np_RMSE(arr_1, arr_2):
+            return np.sqrt(np.mean((arr_1 - arr_2)**2))
+
+        RMSE_prediction_official = np_RMSE(prediction, official_predictions)
+        RMSE_prediction_real = np_RMSE(prediction, observations)
+
+        assert RMSE_prediction_official < 4.0
+        assert RMSE_prediction_real < 14.0
 
 if __name__ == "__main__":
     unittest.main()

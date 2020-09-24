@@ -17,7 +17,7 @@ time.tzset()
 
 ##############################
 # predict against numerical data
-if False:
+if True:
     path_to_data = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "..", "tests", "dataset",
                                 "fes_tide_time_series.nc")
@@ -46,7 +46,7 @@ if False:
 ##############################
 # predict against real-world data
 # load the dataset for the "middle"
-if False:
+if True:
     path_to_data = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "..", "tests", "dataset",
                                 "dataset_observation_middle.nc4")
