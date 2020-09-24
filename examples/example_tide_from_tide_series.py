@@ -220,7 +220,3 @@ if True:
 
     show_tides(late_time_as_datetimes, late_observations, late_pytide_predictions, late_official_predictions,
                explanation="on data much after the training interval")
-
-
-# TODO: make into a jupyter notebook for ease of reading
-# TODO: write a super-simple class-based API "for dummies"
