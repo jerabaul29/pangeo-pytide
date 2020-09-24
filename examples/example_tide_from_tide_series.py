@@ -197,16 +197,14 @@ if True:
 
     early_pytide_predictions = wt.tide_from_tide_series(early_time, w)
 
-    RMSE_stats(early_observations, early_official_predictions, early_pytide_predictions,
+    show_tides(early_time_as_datetimes, early_observations, early_pytide_predictions, early_official_predictions,
                explanation="on data much before the training interval")
-
-    show_tides(early_time_as_datetimes, early_observations, early_pytide_predictions, early_official_predictions)
 
     ##############################
     # now show on some data long after
     path_to_late_data = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                      "..", "tests", "dataset",
-                                     "dataset_observation_before.nc4")
+                                     "dataset_observation_after.nc4")
 
     with netCDF4.Dataset(path_to_late_data) as dataset:
         late_time = dataset['timestamps'][:]
