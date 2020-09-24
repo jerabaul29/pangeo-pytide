@@ -4,11 +4,12 @@
 # BSD-style license that can be found in the LICENSE file.
 import datetime
 import os
+import time
 import numpy
 import unittest
 import netCDF4
-import numpy
 import pytide
+import pytz
 
 
 class AstronomicAngle(unittest.TestCase):
@@ -107,6 +108,32 @@ class WaveTable(unittest.TestCase):
         self.assertAlmostEqual(delta.mean(), 0, delta=1e-16)
         self.assertAlmostEqual(delta.std(), 0, delta=1e-12)
 
+class TestPyTideAnalyzer(unittest.TestCase):
+    dataset_numeric = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "dataset", "fes_tide_time_series.nc")
+
+    dataset_real_world = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                      "dataset", "dataset_observation_middle.nc4")
+
+    os.environ["TZ"] = "UTC"
+    time.tzset()
+
+    def test_against_simulation(self):
+        pytide_analyzer = pytide.PyTideAnalyzer()
+
+        with netCDF4.Dataset(self.dataset_numeric) as dataset:
+            time_data = dataset['time'][:] * 1e-6    # microseconds to epoch (seconds)
+            h = dataset['ocean'][:]
+
+        list_utc_datetimes = [pytz.utc.localize(datetime.datetime.fromtimestamp(crrt_timestamp)) for
+                              crrt_timestamp in time_data]
+
+        pytide_analyzer.fit_tide_data(list_utc_datetimes, h, display=False)
+
+        prediction = pytide_analyzer.pre
+
+    def test_agains_real_world(self):
+        pass
 
 if __name__ == "__main__":
     unittest.main()

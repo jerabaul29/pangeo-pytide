@@ -8,9 +8,17 @@ Tidal constituents analysis
 """
 from typing import List, Optional, Tuple, Union
 import datetime
+import time
+import os
+import pytz
 import numpy
+import numpy as np
 from pytide import core
 from pytide import version
+from raise_assert import ras
+import matplotlib.pyplot as plt
+import copy
+from functools import wraps
 
 __version__ = version.release()
 __date__ = version.date()
@@ -209,3 +217,144 @@ class WaveDict(WaveTable):
                              "constituents loaded")
         wave_properties = [wave[item] for item in self]
         return super().tide_from_tide_series(epoch, wave_properties)
+
+
+class PyTideAnalyzer():
+    """A simple wrapper class for using Pytide to perform tides analysis,
+    making sure that the user cannot shoot himself in the feet."""
+    def __init__(self, verbose=0, max_admissible_tide_value=1400.0):
+        """verbose: degree of verbosity, 0 is none, higher is more
+        max_admissible_tide_value: the max amplitude of tide values,
+            meeting values higher than this will raise.
+        """
+        ras(isinstance(verbose, int))
+        ras(isinstance(max_admissible_tide_value, float))
+        ras(max_admissible_tide_value > 0)
+
+        try:
+            ras(os.environ["TZ"] == "UTC")
+        except:
+            raise ValueError("PyTideAnalyzer needs the interpreter to use UTC; to set:\n"
+                             "                    import os\n"
+                             "                    import time\n"
+                             "                    os.environ['TZ'] = 'UTC'\n"
+                             "                    time.tzset()")
+
+        self.verbose = verbose
+        self.fitted = False
+        self.max_admissible_tide_value = max_admissible_tide_value
+
+    def assert_is_utc_datetime(self, date_in):
+        """Assert that date_in is an UTC datetime."""
+        ras(isinstance(date_in, datetime.datetime))
+
+        if not (date_in.tzinfo == pytz.utc or
+                date_in.tzinfo == datetime.timezone.utc):
+            raise Exception("not utc!")
+
+    def fit_tide_data(self, list_utc_datetimes, np_tide_elevation,
+                      display=False, clean_signals=False):
+        """Use observations to fit tide parameters to a given location.
+        Input:
+            - list_utc_datetimes: the list of UTC datetimes for observation points
+            - np_tide_elevation: the corresponding elevation values
+            - display: if the fit should be displayed for visual inspection
+            - clean_signal: if the input signal should be cleaned for invalid values before
+                performing fit.
+        """
+        if self.fitted:
+            raise ValueError("Fit already performed! Use new instance to perform a new fit.")
+
+        ras(isinstance(list_utc_datetimes, list))
+        for crrt_utc_datetime in list_utc_datetimes:
+            self.assert_is_utc_datetime(crrt_utc_datetime)
+
+        self.list_utc_datetimes = copy.deepcopy(list_utc_datetimes)
+        self.list_utc_datetimes = np.array([np.datetime64(crrt_datetime.replace(tzinfo=None))
+                                            for crrt_datetime in self.list_utc_datetimes])
+
+        ras(isinstance(np_tide_elevation, np.ndarray))
+        ras(np_tide_elevation.dtype == np.dtype("float")
+            or np_tide_elevation.dtype == np.dtype("float32")
+            or np_tide_elevation.dtype == np.dtype("float64"))
+        self.np_tide_elevation = np.copy(np_tide_elevation)
+
+        ras(len(self.list_utc_datetimes) == self.np_tide_elevation.shape[0])
+
+        if clean_signals:
+            valid_indexes = list(np.where(np.logical_and(
+                np.isfinite(self.np_tide_elevation),
+                np.abs(self.np_tide_elevation) < self.max_admissible_tide_value)
+            )[0])
+
+            nbr_invalid_indexes = len(self.list_utc_datetimes) - len(valid_indexes)
+
+            if nbr_invalid_indexes > 0:
+                print("found {} invalid values out of {}; clean now!".format(nbr_invalid_indexes,
+                                                                             len(self.list_utc_datetimes)))
+
+            self.np_tide_elevation = self.np_tide_elevation[valid_indexes]
+            self.list_utc_datetimes = self.list_utc_datetimes[valid_indexes]
+
+        # check that no abnormal values in data to fit
+        if not np.all(np.isfinite(self.np_tide_elevation)):
+            raise ValueError("np_tide_elevation contains inf or nan values.")
+        if not np.all(np.abs(self.np_tide_elevation) < self.max_admissible_tide_value):
+            raise ValueError("np_tide_elevation contains value with abnormaly large amplitude")
+
+        # take away the mean component
+        self.mean_tide_elevation = np.mean(self.np_tide_elevation)
+        self.np_tide_elevation = self.np_tide_elevation - self.mean_tide_elevation
+
+        if self.verbose > 0:
+            print("build wave table")
+        self.wave_table = WaveTable()
+
+        if self.verbose > 0:
+            print("compute nodal modulations")
+        self.nodal_amp, self.nodal_phase = \
+            self.wave_table.compute_nodal_modulations(self.list_utc_datetimes)
+
+        if self.verbose > 0:
+            print("perform harmonic analysis")
+        self.waves = self.wave_table.harmonic_analysis(self.np_tide_elevation,
+                                                       self.nodal_amp,
+                                                       self.nodal_phase)
+
+        self.fitted = True
+
+        if display:
+            prediction_on_fit_data = self.predict_tide(list_utc_datetimes)
+
+            plt.figure()
+            plt.plot(self.list_utc_datetimes, self.np_tide_elevation + self.mean_tide_elevation,
+                     label="data for fit")
+            plt.plot(list_utc_datetimes, prediction_on_fit_data,
+                     "*", label="obtained prediction")
+            plt.legend(loc="lower right")
+            plt.tight_layout()
+            plt.ylim([-self.max_admissible_tide_value, self.max_admissible_tide_value])
+            plt.show()
+
+    def predict_tide(self, list_utc_datetimes):
+        """Perform tide prediction after fitting has been performed.
+        Input:
+            - list_utc_datetimes: the UTC datetimes on which to perform
+                tide prediction
+        """
+        if not self.fitted:
+            raise ValueError("No fit performed yet! Fit to data first using fit_tide_data method.")
+
+        ras(isinstance(list_utc_datetimes, list))
+        for crrt_utc_datetime in list_utc_datetimes:
+            self.assert_is_utc_datetime(crrt_utc_datetime)
+
+        list_timestamps = [crrt_utc_datetime.timestamp() for crrt_utc_datetime in list_utc_datetimes]
+
+        if self.verbose > 0:
+            print("perform predictions")
+        prediction = self.wave_table.tide_from_tide_series(list_timestamps,
+                                                           self.waves)
+        prediction = prediction + self.mean_tide_elevation
+
+        return prediction
