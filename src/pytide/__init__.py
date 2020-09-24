@@ -8,7 +8,6 @@ Tidal constituents analysis
 """
 from typing import List, Optional, Tuple, Union
 import datetime
-import time
 import os
 import pytz
 import numpy
@@ -18,7 +17,6 @@ from pytide import version
 from raise_assert import ras
 import matplotlib.pyplot as plt
 import copy
-from functools import wraps
 
 __version__ = version.release()
 __date__ = version.date()

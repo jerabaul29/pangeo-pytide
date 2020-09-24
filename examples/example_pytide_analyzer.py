@@ -10,7 +10,7 @@ import pytide
 
 import matplotlib.pyplot as plt
 
-from helpers import RMSE_stats, show_tides
+from helpers import show_tides
 
 os.environ["TZ"] = "UTC"
 time.tzset()
@@ -27,7 +27,7 @@ if False:
         observations = dataset['ocean'][:]             # TODO: report
 
     list_utc_datetimes = [pytz.utc.localize(datetime.datetime.fromtimestamp(crrt_timestamp)) for
-                        crrt_timestamp in time_input]
+                          crrt_timestamp in time_input]
 
     pytide_analyzer = pytide.PyTideAnalyzer(verbose=1)
 
@@ -57,7 +57,7 @@ if False:
         official_predictions = dataset['predictions'][:]
 
     list_utc_datetimes = [pytz.utc.localize(datetime.datetime.fromtimestamp(crrt_timestamp)) for
-                        crrt_timestamp in time_input]
+                          crrt_timestamp in time_input]
 
     pytide_analyzer = pytide.PyTideAnalyzer(verbose=1)
 
