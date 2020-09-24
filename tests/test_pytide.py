@@ -149,7 +149,7 @@ class TestPyTideAnalyzer(unittest.TestCase):
         pytide_analyzer = pytide.PyTideAnalyzer(verbose=0)
 
         # using display=True here would illustrate the fit
-        pytide_analyzer.fit_tide_data(list_utc_datetimes, observations, display=True, clean_signals=True)
+        pytide_analyzer.fit_tide_data(list_utc_datetimes, observations, display=False, clean_signals=True)
         prediction = pytide_analyzer.predict_tide(list_utc_datetimes)
 
         def np_RMSE(arr_1, arr_2):
