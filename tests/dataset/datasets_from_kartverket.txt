@@ -1,0 +1,13 @@
+Copyright 2020 Norwegian Meteorological Institute
+Author Jean Rabault
+This file is released with the same copyright as found in the LICENSE file
+
+the "dataset_observation_*.nc4" files here contain data obtained form kartverket API:
+https://www.kartverket.no/en/sehavniva/api-for-water-level-data-and-widget/
+https://www.kartverket.no/data/lisens/
+these data are relased under CC BY 4.0 license
+a copy of their license is accessible at: https://creativecommons.org/licenses/by/4.0/deed.en
+we gratefully acknowledge the release of these data
+
+The data collection through kartverket API was performed using code at:
+https://github.com/jerabaul29/kartverket_storm_surge_data
