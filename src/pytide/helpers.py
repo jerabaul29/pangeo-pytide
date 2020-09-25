@@ -83,6 +83,9 @@ def show_tides(time_as_datetimes, observations,
 
     plt.ylim([-max_amplitude, max_amplitude])
 
+    if explanation != "":
+        plt.title(explanation)
+
     plt.legend(loc="lower right")
 
     plt.show()
