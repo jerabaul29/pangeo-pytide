@@ -45,58 +45,57 @@ documentation](https://conda.io/projects/conda/en/latest/commands/install.html).
 > the [help page](https://pangeo-pytide.readthedocs.io/en/latest/setup.html) of
 > the project.
 
+### Notes
+
+I had some problems installing due to some MKL issues even in conda, and therefore in this version I removed MKL altogether as it was not important for my use. In this case, the build script works fine on my machine (Ubuntu 20.04), and the result available in the ```build``` folder works fine (may need to add to bashrc though, for example in my case:
+
+```bash
+export PYTHONPATH="${PYTHONPATH}:/home/jrmet/Desktop/Git/pangeo-pytide/build/lib.linux-x86_64-3.8"
+```
+
+## Testing
+
+```bash
+python -m unittest
+```
+
 ## Quick Tutorial
 
-The distribution contains a time series
-[fes_tide_time_series.nc](https://github.com/CNES/pangeo-pytide/blob/master/tests/dataset/fes_tide_time_series.nc)
-that will be used in this help.
+See the ```example``` folder.
 
-The first step is to read this time series using the NetCDF4 library, for
-example:
+The recommended way to use the code is to use the ```PyTideAnalyzer``` class, which is a thin wraper around older pytide methods with the aim to make the API clear and robust, and to avoid that the user shoots himself in the foot in particular when it regards time zone issues.
 
-    import netCDF4
-    import pytide
+```python
+import pytide
+import os
+import netCDF4
+import datetime
+import pytz
+import time
+from pytide.helpers import show_tides
 
-    with netCDF4.Dataset("tests/dataset/fes_tide_time_series.nc") as dataset:
-        time = netCDF4.num2date(dataset['time'][:],
-                                dataset['time'].unit,
-                                only_use_cftime_datetimes=False)
-        h = dataset['ocean'][:] * 1e-2      # cm to m
+os.environ["TZ"] = "UTC"
+time.tzset()
 
-Then, we will create an instance of a `pytide.WaveTable` object:
+path_to_data = os.path.join(os.getcwd(),
+                            "tests", "dataset",
+                            "dataset_observation_middle.nc4")
 
-    wt = pytide.WaveTable()
+with netCDF4.Dataset(path_to_data) as dataset:
+    time_input = dataset['timestamps'][:]
+    observations = dataset['observations'][:]
+    official_predictions = dataset['predictions'][:]
 
-By default, all components known by this object are loaded into memory. The
-list of components known by this object can be retrieved using the
-[pytide.WaveTable.known_constituents](https://pangeo-pytide.readthedocs.io/en/latest/pytide.html#pytide.WaveTable.known_constituents)
-method.
+list_utc_datetimes = [pytz.utc.localize(datetime.datetime.fromtimestamp(crrt_timestamp)) for
+                        crrt_timestamp in time_input]
 
-If you want to restrict the analysis to only a few components, you must provide
-a list to the constructor in order to specify the waves to be analyzed.
+pytide_analyzer = pytide.PyTideAnalyzer(verbose=1)
 
-    wt = pytide.WaveTable(["M2", "K1", "O1", "P1", "Q1", "S1"])
+# using display=True here would illustrate the fit
+pytide_analyzer.fit_tide_data(list_utc_datetimes, observations, display=False)
 
-The
-[pytide.WaveTable.constituents](https://pangeo-pytide.readthedocs.io/en/latest/pytide.html#pytide.WaveTable.constituents)
-method allows to retrieve the list of waves defined during the construction of
-the object.
+prediction = pytide_analyzer.predict_tide(list_utc_datetimes)
 
-The different nodal corrections are then calculated from the time series to be
-analyzed:
-
-    f, vu = wt.compute_nodal_modulations(time.astype("datetime64"))
-    # You can also use a list of datetime.datetime objects
-    # wt.compute_nodal_modulations(list(time))
-
-These coefficients are used by [harmonic
-analysis](https://pangeo-pytide.readthedocs.io/en/latest/pytide.html#pytide.WaveTable.harmonic_analysis)
-to determine the properties of the different tidal waves defined during the
-construction of the instance.
-
-    w = wt.harmonic_analysis(h, f, vu)
-
-This result can then be used to determine a tidal height for the analyzed time
-series:
-
-    hp = wt.tide_from_tide_series(time, w)
+show_tides(list_utc_datetimes, observations, prediction, official_predictions,
+            explanation="BGO middle dataset")
+```

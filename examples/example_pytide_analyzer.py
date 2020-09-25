@@ -10,7 +10,7 @@ import pytide
 
 import matplotlib.pyplot as plt
 
-from helpers import show_tides
+from pytide.helpers import show_tides
 
 os.environ["TZ"] = "UTC"
 time.tzset()
