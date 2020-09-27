@@ -240,11 +240,6 @@ class BuildExt(setuptools.command.build_ext.build_ext):
                     cfg.upper(), extdir)
             ]
             build_args += ['--', '/m']
-            if self.verbose:
-                build_args += ['/verbosity:n']
-
-        if self.verbose:
-            build_args.insert(0, "--verbose")
 
         os.chdir(str(build_temp))
 
