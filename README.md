@@ -92,7 +92,7 @@ list_utc_datetimes = [pytz.utc.localize(datetime.datetime.fromtimestamp(crrt_tim
 pytide_analyzer = pytide.PyTideAnalyzer(verbose=1)
 
 # using display=True here would illustrate the fit
-pytide_analyzer.fit_tide_data(list_utc_datetimes, observations, display=False)
+dict_wave_modes = pytide_analyzer.fit_tide_data(list_utc_datetimes, observations, display=False)
 
 prediction = pytide_analyzer.predict_tide(list_utc_datetimes)
 

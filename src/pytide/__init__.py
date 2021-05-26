@@ -334,6 +334,12 @@ class PyTideAnalyzer():
             plt.ylim([-self.max_admissible_tide_value, self.max_admissible_tide_value])
             plt.show()
 
+        dict_wave_modes = {}
+        for constituent, coefficient in zip(self.wave_table.constituents(), self.waves):
+            dict_wave_modes[constituent] = coefficient
+
+        return dict_wave_modes
+
     def predict_tide(self, list_utc_datetimes):
         """Perform tide prediction after fitting has been performed.
         Input:
